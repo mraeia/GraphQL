@@ -1,6 +1,8 @@
 const graphql = require('graphql');
 const mongoose = require('mongoose');
 const User = mongoose.model('User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const {
     GraphQLObjectType,
@@ -8,15 +10,27 @@ const {
     GraphQLList,
     GraphQLID,
     GraphQLSchema,
-    GraphQLNonNull
+    GraphQLNonNull,
+    GraphQLInt
 } = graphql;
+
+const AuthData = new GraphQLObjectType({
+    name: 'Auth',
+    fields: () => ({
+        id: { type: GraphQLID},
+        token: { type: GraphQLString},
+        tokenExpiration: { type: GraphQLInt}
+    })
+})
 
 const UserType = new GraphQLObjectType({
     name : 'User',
     fields: () => ({
         id: { type: GraphQLID},
-        name: { type: GraphQLString},
+        firstName: { type: GraphQLString},
+        lastName: { type: GraphQLString},
         email: { type: GraphQLString},
+        password: {type: GraphQLString},
         friends: {
             type: new GraphQLList(UserType),
             resolve(parentValue,args){
@@ -36,6 +50,27 @@ const RootQuery = new GraphQLObjectType({
             resolve(parentValue, args){
                 return User.findById(args.id).then(user => user)
             }
+        },
+        login: {
+            type: AuthData,
+            args: { 
+                email: {type: GraphQLString},
+                password: {type: GraphQLString}
+            },
+            resolve(parentValue,{email,password}){
+                return User.findOne({email})
+                .then(user => {
+                    if (!user){
+                        throw new Error('User does not exist!');
+                    }
+                    return bcrypt.compare(password,user.password)
+                }).then(isEqual =>{
+                    if (!isEqual){
+                        throw new Error('Incorrect password!')
+                    }
+                    console.log(isEqual);
+                }).catch(err => err)
+            }
         }
     }
 })
@@ -46,11 +81,26 @@ const mutation = new GraphQLObjectType({
         addUser: {
             type: UserType,
             args: {
-                name: {type: new GraphQLNonNull(GraphQLString)}
+                email: {type: new GraphQLNonNull(GraphQLString)},
+                firstName: {type: new GraphQLNonNull(GraphQLString)},
+                lastName: {type: new GraphQLNonNull(GraphQLString)},
+                password: {type: new GraphQLNonNull(GraphQLString)}
             },
-            resolve(parentValue,{name}){
-                const user = new User({name});
-                return user.save().then(user => user);
+            resolve(parentValue,{email,firstName,lastName,password}){
+                return User.findOne({email})
+                .then(user =>{
+                    if (user){
+                        throw new Error('User already exists!')
+                    }
+                    return bcrypt.hash(password,12)
+                })
+                .then( hashedPassword =>{
+                    const user = new User({email,firstName,lastName,password:hashedPassword});
+                    return user.save();
+                }).then(user => user)
+                .catch(error =>{
+                    throw error
+                });
             }
         },
         addFriend: {
