@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const expressGraphQL = require('express-graphql');
 const models = require('./models');
-const passport = require('passport');
+const isAuth = require('./middleware/is-auth');
 const bodyParser = require('body-parser');
 var cors = require('cors');
 
@@ -15,7 +15,11 @@ const schema = require('./schema');
 const dbRoute = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0-bz3zq.mongodb.net/test?retryWrites=true&w=majority`;
 
 mongoose.set('useCreateIndex', true);
-mongoose.connect(dbRoute, { useNewUrlParser: true });
+mongoose.connect(dbRoute, { useNewUrlParser: true }).then(()=>{
+    console.log('Connected to DB!');
+}).catch(err =>{
+    console.log(err);
+});
 
 let db = mongoose.connection;
 
@@ -23,25 +27,8 @@ db.once('open', () => console.log('connected to the database'));
 
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
-var George = new User({
-    name: 'George'
-})
-
-const filter = { name: 'George' };
-
-// User.findById('5d66f02443e3ed6baf7c2dac').then(user => {
-//     console.log(user);
-// })
-
-// George.save((err,user)=> {
-//     if (err){
-//         console.log("Something went wrong!")
-//     }else{
-//         console.log(user)
-//     }
-// })
-
 app.use(cors());
+app.use(isAuth);
 
 app.use('/graphql', expressGraphQL({
     schema,

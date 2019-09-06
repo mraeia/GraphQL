@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { BrowserRouter,Link,Route } from 'react-router-dom';
 import Signup from './Signup';
 import Login from './Login';
+import AuthContext from './context/auth-context';
 
 class App extends Component {
   render() {
@@ -18,9 +19,11 @@ class App extends Component {
         </ul>
 
         <hr />
-        <Route exact path="/" component={Signup} />
-        <Route path="/signup" component={Signup} />
-        <Route path="/login" component={Login} />
+        <AuthContext.Provider>
+          <Route exact path="/" component={Signup} />
+          <Route path="/signup" component={Signup} />
+          <Route path="/login" component={Login} />
+        </AuthContext.Provider>
       </div>
     </BrowserRouter>
     )

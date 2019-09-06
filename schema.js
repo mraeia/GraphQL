@@ -54,8 +54,8 @@ const RootQuery = new GraphQLObjectType({
         login: {
             type: AuthData,
             args: { 
-                email: {type: GraphQLString},
-                password: {type: GraphQLString}
+                email: {type: new GraphQLNonNull(GraphQLString)},
+                password: {type: new GraphQLNonNull(GraphQLString)}
             },
             resolve(parentValue,{email,password}){
                 return User.findOne({email})
@@ -63,12 +63,15 @@ const RootQuery = new GraphQLObjectType({
                     if (!user){
                         throw new Error('User does not exist!');
                     }
-                    return bcrypt.compare(password,user.password)
-                }).then(isEqual =>{
-                    if (!isEqual){
-                        throw new Error('Incorrect password!')
-                    }
-                    console.log(isEqual);
+                    return bcrypt.compare(password,user.password).then(isEqual =>{
+                        if (!isEqual){
+                            throw new Error('Incorrect password!')
+                        }
+                        const token = jwt.sign({id:user._id,email:user.email},'(:SomeSecret:)',{
+                            expiresIn: '1h'
+                        });
+                        return {id:user.id,token,tokenExpiration: 1}
+                    })
                 }).catch(err => err)
             }
         }
