@@ -67,7 +67,8 @@ const RootQuery = new GraphQLObjectType({
                         if (!isEqual){
                             throw new Error('Incorrect password!')
                         }
-                        const token = jwt.sign({id:user._id,email:user.email},'(:SomeSecret:)',{
+                        const token = jwt.sign({
+                            id:user._id,email:user.email,firstName:user.firstName,lastName:user.lastName},'(:SomeSecret:)',{
                             expiresIn: '1h'
                         });
                         return {id:user.id,token,tokenExpiration: 1}

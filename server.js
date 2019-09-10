@@ -44,6 +44,13 @@ app.post('/register', (req,res)=>{
     //User.register(new)
 })
 
+app.get('/secret', (req,res)=>{
+    console.log(req.isAuth);
+    res.json({
+        'hello':'hello'
+    })
+})
+
 app.get('/', (req,res) => {
     res.send('Hello world!');
 })

@@ -1,7 +1,10 @@
 import React, { Component } from 'react';
-import {graphql} from 'react-apollo';
-import gql from 'graphql-tag';
 import AuthContext from './context/auth-context';
+import axios from 'axios';
+import setAuthorizationToken from './utils/setAuthorizationToken';
+import jwt from 'jsonwebtoken';
+import {setCurrentUser} from './actions';
+import { connect } from 'react-redux';
 
 
 class Login extends Component{
@@ -18,24 +21,43 @@ class Login extends Component{
         }
     }
 
-    login = (data) => {
-        console.log(data);
-        this.context.login(data.login.token,data.login.id,data.login.tokenExpiration);
-    }
-
     handleChange = (e) => {
         this.setState({ [e.target.name]: e.target.value });
     }
 
     onSubmit = (e) => {
         e.preventDefault();
-        this.setState({submit:true});
+
+        const query = {
+            query: `
+                query {
+                    login(email: "${this.state.email}", password: "${this.state.password}"){
+                        id
+                        token
+                        tokenExpiration
+                    }
+                }`
+        };
+
+
+        axios({
+            method: 'post',
+            url: 'http://localhost:3001/graphql',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify(query)
+          }).then(result => {
+              const token = result.data.data.login.token;
+              localStorage.setItem('jwt', token);
+              setAuthorizationToken(token);
+              this.props.setCurrentUser(jwt.decode(token));
+          });
     }
 
     render(){
         return (
             <div>
-                {this.state.submit ? <Login email={this.state.email} password={this.state.password} login={this.login}/>: null}
                 <form onSubmit={this.onSubmit}>
                     <input type="email" placeholder="Email" name="email" value={this.state.email} onChange={this.handleChange} required></input>
                     <input type="password" placeholder="Password" name="password" value={this.state.password} onChange={this.handleChange} required></input>
@@ -46,14 +68,4 @@ class Login extends Component{
     }
 }
 
-const query = gql`
-    query Login($email: String!,$password: String!){
-        login(email: $email,password: $password){
-            id
-            token
-            tokenExpiration
-        }
-    }
-`;
-
-export default Login;
+export default connect(null, {setCurrentUser})(Login);
